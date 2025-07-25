@@ -17,4 +17,6 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(message)
+
+	fmt.Println(greetings.RandomGreet())
 }
