@@ -19,4 +19,14 @@ func main() {
 	fmt.Println(message)
 
 	fmt.Println(greetings.RandomGreet())
+
+	names := []string{"Genjirou", "Hiroshi", "Yuki"}
+
+	messages, err := greetings.Greets(names)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for name, message := range messages {
+		fmt.Printf("%s: %s\n", name, message)
+	}
 }
