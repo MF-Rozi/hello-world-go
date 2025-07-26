@@ -10,7 +10,9 @@ func Greet(name string) (string, error) {
 	if name == "" {
 		return "", errors.New("name cannot be empty")
 	}
-	return fmt.Sprintf("Hello, %s!", name), nil
+
+	return RandomGreet(name), nil
+	// return fmt.Sprintf("Hello, %s!", name), nil
 }
 
 func Greets(names []string) (map[string]string, error) {
@@ -24,13 +26,13 @@ func Greets(names []string) (map[string]string, error) {
 	}
 	return messages, nil
 }
-func RandomGreet() string {
+func RandomGreet(name string) string {
 	format := []string{
-		"Hello, Sir!",
-		"Greetings, Friend!",
-		"Salutations, Traveler!",
-		"Welcome, Guest!",
-		"Hi there, Buddy!",
+		fmt.Sprintf("Hello, %s!", name),
+		fmt.Sprintf("Greetings, %s!", name),
+		fmt.Sprintf("Salutations, %s!", name),
+		fmt.Sprintf("Welcome, %s!", name),
+		fmt.Sprintf("Hi there, %s!", name),
 	}
 	return format[rand.Intn(len(format))]
 }
