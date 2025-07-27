@@ -50,6 +50,10 @@ func main() {
 	GetAlbumData(database)
 
 	GetAlbumsByArtist(database, "John Coltrane")
+
+	GetAlbumById(database, 1)
+
+	GetAlbumByName(database, "Blue Train")
 }
 
 func GetDatabaseTable(database *db.DB) {
@@ -115,4 +119,24 @@ func GetAlbumsByArtist(database *db.DB, artist string) {
 	if err := rows.Err(); err != nil {
 		fmt.Println("Error with rows:", err)
 	}
+}
+
+func GetAlbumById(database *db.DB, id int) {
+	var album Album
+	row := database.QueryRow("SELECT id, title, artist, price FROM albums WHERE id = ?", id)
+	if err := row.Scan(&album.ID, &album.Title, &album.Artist, &album.Price); err != nil {
+		fmt.Printf("Error querying album by ID %d: %v\n", id, err)
+		return
+	}
+	fmt.Printf("Album by ID %d: Title: %s, Artist: %s, Price: %.2f\n", album.ID, album.Title, album.Artist, album.Price)
+}
+
+func GetAlbumByName(database *db.DB, name string) {
+	var album Album
+	row := database.QueryRow("SELECT id, title, artist, price FROM albums WHERE title = ?", name)
+	if err := row.Scan(&album.ID, &album.Title, &album.Artist, &album.Price); err != nil {
+		fmt.Printf("Error querying album by name %s: %v\n", name, err)
+		return
+	}
+	fmt.Printf("Album by Name %s: ID: %d, Artist: %s, Price: %.2f\n", album.Title, album.ID, album.Artist, album.Price)
 }
