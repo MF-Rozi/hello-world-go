@@ -40,6 +40,7 @@ func main() {
 
 	GetDatabaseTable(database)
 
+	GetAlbumData(database)
 }
 
 func GetDatabaseTable(database *db.DB) {
@@ -52,5 +53,28 @@ func GetDatabaseTable(database *db.DB) {
 	fmt.Println("Available Tables:")
 	for _, table := range tables {
 		fmt.Println("-", table)
+	}
+}
+
+func GetAlbumData(database *db.DB) {
+	rows, err := database.Query("SELECT id, title FROM albums")
+	if err != nil {
+		fmt.Println("Error querying albums:", err)
+		return
+	}
+	defer rows.Close()
+
+	fmt.Println("Albums:")
+	for rows.Next() {
+		var id int
+		var title string
+		if err := rows.Scan(&id, &title); err != nil {
+			fmt.Println("Error scanning row:", err)
+			continue
+		}
+		fmt.Printf("ID: %d, Title: %s\n", id, title)
+	}
+	if err := rows.Err(); err != nil {
+		fmt.Println("Error with rows:", err)
 	}
 }
