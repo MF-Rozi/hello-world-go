@@ -8,6 +8,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type Album struct {
+	ID     int
+	Title  string
+	Artist string
+	Price  float32
+}
+
 func main() {
 	fmt.Println("Hello, World!")
 
@@ -41,6 +48,8 @@ func main() {
 	GetDatabaseTable(database)
 
 	GetAlbumData(database)
+
+	GetAlbumsByArtist(database, "John Coltrane")
 }
 
 func GetDatabaseTable(database *db.DB) {
@@ -57,7 +66,8 @@ func GetDatabaseTable(database *db.DB) {
 }
 
 func GetAlbumData(database *db.DB) {
-	rows, err := database.Query("SELECT id, title FROM albums")
+	var albums []Album
+	rows, err := database.Query("SELECT id, title, artist, price FROM albums")
 	if err != nil {
 		fmt.Println("Error querying albums:", err)
 		return
@@ -66,13 +76,41 @@ func GetAlbumData(database *db.DB) {
 
 	fmt.Println("Albums:")
 	for rows.Next() {
-		var id int
-		var title string
-		if err := rows.Scan(&id, &title); err != nil {
+		var album Album
+		if err := rows.Scan(&album.ID, &album.Title, &album.Artist, &album.Price); err != nil {
 			fmt.Println("Error scanning row:", err)
 			continue
 		}
-		fmt.Printf("ID: %d, Title: %s\n", id, title)
+		albums = append(albums, album)
+	}
+	if err := rows.Err(); err != nil {
+		fmt.Println("Error with rows:", err)
+	}
+	for _, alb := range albums {
+		fmt.Printf("ID: %d, Title: %s, Artist: %s, Price: %.2f\n", alb.ID, alb.Title, alb.Artist, alb.Price)
+	}
+}
+
+func GetAlbumsByArtist(database *db.DB, artist string) {
+	var albums []Album
+	rows, err := database.Query("SELECT id, title, artist, price FROM albums WHERE artist = ?", artist)
+	if err != nil {
+		fmt.Println("Error querying albums by artist:", err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var alb Album
+		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+			fmt.Printf("Error scanning album by artist %q: %v\n", artist, err)
+			return
+		}
+		albums = append(albums, alb)
+	}
+	fmt.Printf("Albums by %s:\n", artist)
+	for _, alb := range albums {
+		fmt.Printf("ID: %d, Title: %s, Artist: %s, Price: %.2f\n", alb.ID, alb.Title, alb.Artist, alb.Price)
 	}
 	if err := rows.Err(); err != nil {
 		fmt.Println("Error with rows:", err)
