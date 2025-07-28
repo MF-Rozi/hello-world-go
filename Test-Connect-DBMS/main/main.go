@@ -54,6 +54,20 @@ func main() {
 	GetAlbumById(database, 1)
 
 	GetAlbumByName(database, "Blue Train")
+
+	newAlbum := Album{
+		Title:  "Genjirou's First Album",
+		Artist: "GenjirouHD",
+		Price:  9.99,
+	}
+
+	createdAlbum, err := AddAlbum(database, newAlbum)
+	if err != nil {
+		fmt.Println("Error adding album:", err)
+		return
+	}
+	fmt.Println("Album added successfully:", createdAlbum)
+
 }
 
 func GetDatabaseTable(database *db.DB) {
@@ -139,4 +153,19 @@ func GetAlbumByName(database *db.DB, name string) {
 		return
 	}
 	fmt.Printf("Album by Name %s: ID: %d, Artist: %s, Price: %.2f\n", album.Title, album.ID, album.Artist, album.Price)
+}
+
+func AddAlbum(database *db.DB, album Album) (Album, error) {
+	result, err := database.Exec("INSERT INTO albums (title, artist, price) VALUES (?, ?, ?)", album.Title, album.Artist, album.Price)
+	if err != nil {
+		return Album{}, fmt.Errorf("error inserting album: %w", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return Album{}, fmt.Errorf("error getting last insert ID: %w", err)
+	}
+
+	album.ID = int(id)
+	return album, nil
 }
