@@ -51,22 +51,22 @@ func main() {
 
 	GetAlbumsByArtist(database, "John Coltrane")
 
-	GetAlbumById(database, 1)
+	GetAlbumById(database, 5)
 
-	GetAlbumByName(database, "Blue Train")
+	GetAlbumByName(database, "Genjirou")
 
-	newAlbum := Album{
-		Title:  "Genjirou's First Album",
-		Artist: "GenjirouHD",
-		Price:  9.99,
-	}
+	// newAlbum := Album{		//create is commented out to avoid adding duplicate entries
+	// 	Title:  "Genjirou's First Album",
+	// 	Artist: "GenjirouHD",
+	// 	Price:  9.99,
+	// }
 
-	createdAlbum, err := AddAlbum(database, newAlbum)
-	if err != nil {
-		fmt.Println("Error adding album:", err)
-		return
-	}
-	fmt.Println("Album added successfully:", createdAlbum)
+	// createdAlbum, err := AddAlbum(database, newAlbum)
+	// if err != nil {
+	// 	fmt.Println("Error adding album:", err)
+	// 	return
+	// }
+	// fmt.Println("Album added successfully:", createdAlbum)
 
 }
 
