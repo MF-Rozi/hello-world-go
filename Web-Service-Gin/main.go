@@ -53,6 +53,7 @@ func main() {
 
 	router := gin.Default()
 	router.GET("/albums", getAlbums)
+	router.GET("/albums/:id", getAlbumByID)
 
 	router.Run("localhost:8080")
 
@@ -75,4 +76,16 @@ func getAlbums(c *gin.Context) {
 		albums = append(albums, album)
 	}
 	c.IndentedJSON(http.StatusOK, albums)
+}
+
+func getAlbumByID(c *gin.Context) {
+	id := c.Param("id")
+	var album Album
+
+	row := database.QueryRow("SELECT id, title, artist, price FROM albums WHERE id = ?", id)
+	if err := row.Scan(&album.ID, &album.Title, &album.Artist, &album.Price); err != nil {
+		c.JSON(404, gin.H{"error": "Album not found"})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, album)
 }
