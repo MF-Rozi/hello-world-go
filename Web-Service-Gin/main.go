@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 
 	"dev.mfr/db"
 
@@ -145,6 +146,13 @@ func updateAlbum(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Invalid album data"})
 		return
 	}
+
+	integerid, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid album ID"})
+		return
+	}
+	updatedAlbum.ID = integerid
 
 	result, err := database.Exec("UPDATE albums SET title = ?, artist = ?, price = ? WHERE id = ?", updatedAlbum.Title, updatedAlbum.Artist, updatedAlbum.Price, id)
 	if err != nil {
