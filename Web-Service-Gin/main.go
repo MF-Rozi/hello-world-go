@@ -55,6 +55,7 @@ func main() {
 	router.GET("/albums", getAlbums)
 	router.GET("/albums/:id", getAlbumByID)
 	router.GET("/albums/name/:name", GetAlbumByName)
+	router.POST("/albums/insert", AddAlbum)
 
 	router.Run("localhost:8080")
 
@@ -109,4 +110,27 @@ func GetAlbumByName(c *gin.Context) {
 		albums = append(albums, album)
 	}
 	c.IndentedJSON(http.StatusOK, albums)
+}
+
+func AddAlbum(c *gin.Context) {
+	var newAlbum Album
+	if err := c.BindJSON(&newAlbum); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid album data"})
+		return
+	}
+
+	result, err := database.Exec("INSERT INTO albums (title, artist, price) VALUES (?, ?, ?)", newAlbum.Title, newAlbum.Artist, newAlbum.Price)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to add album"})
+		return
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to retrieve album ID"})
+		return
+	}
+	newAlbum.ID = int(id)
+
+	c.IndentedJSON(http.StatusCreated, newAlbum)
 }
