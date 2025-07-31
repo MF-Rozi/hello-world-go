@@ -56,8 +56,11 @@ func main() {
 	router.GET("/albums/:id", getAlbumByID)
 	router.GET("/albums/name/:name", GetAlbumByName)
 	router.POST("/albums/insert", AddAlbum)
+	router.PUT("/albums/update/:id", updateAlbum)
+	router.DELETE("/albums/delete/:id", deleteAlbum)
 
 	router.Run("localhost:8080")
+	fmt.Println("Server running on http://localhost:8080")
 
 }
 
@@ -133,4 +136,51 @@ func AddAlbum(c *gin.Context) {
 	newAlbum.ID = int(id)
 
 	c.IndentedJSON(http.StatusCreated, newAlbum)
+}
+
+func updateAlbum(c *gin.Context) {
+	id := c.Param("id")
+	var updatedAlbum Album
+	if err := c.BindJSON(&updatedAlbum); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid album data"})
+		return
+	}
+
+	result, err := database.Exec("UPDATE albums SET title = ?, artist = ?, price = ? WHERE id = ?", updatedAlbum.Title, updatedAlbum.Artist, updatedAlbum.Price, id)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to update album"})
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
+		c.JSON(404, gin.H{"error": "Album not found"})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, updatedAlbum)
+}
+func deleteAlbum(c *gin.Context) {
+	id := c.Param("id")
+	var album Album
+	row := database.QueryRow("SELECT id, title, artist, price FROM albums WHERE id = ?", id)
+
+	if err := row.Scan(&album.ID, &album.Title, &album.Artist, &album.Price); err != nil {
+		c.JSON(404, gin.H{"error": "Album not found"})
+		return
+	}
+
+	result, err := database.Exec("DELETE FROM albums WHERE id = ?", id)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to delete album"})
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
+		c.JSON(404, gin.H{"error": "Album not found"})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "Album deleted successfully", "album": album})
 }
