@@ -54,6 +54,7 @@ func main() {
 	router := gin.Default()
 	router.GET("/albums", getAlbums)
 	router.GET("/albums/:id", getAlbumByID)
+	router.GET("/albums/name/:name", GetAlbumByName)
 
 	router.Run("localhost:8080")
 
@@ -88,4 +89,24 @@ func getAlbumByID(c *gin.Context) {
 		return
 	}
 	c.IndentedJSON(http.StatusOK, album)
+}
+
+func GetAlbumByName(c *gin.Context) {
+	name := c.Param("name")
+	var albums []Album
+
+	rows, err := database.Query("SELECT id, title, artist, price FROM albums WHERE title LIKE ?", "%"+name+"%")
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch albums"})
+		return
+	}
+	for rows.Next() {
+		var album Album
+		if err := rows.Scan(&album.ID, &album.Title, &album.Artist, &album.Price); err != nil {
+			fmt.Println("Error scanning row:", err)
+			continue
+		}
+		albums = append(albums, album)
+	}
+	c.IndentedJSON(http.StatusOK, albums)
 }
