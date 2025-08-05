@@ -59,6 +59,7 @@ func main() {
 	router.POST("/albums/", AddAlbum)
 	router.PUT("/albums/:id", updateAlbum)
 	router.DELETE("/albums/:id", deleteAlbum)
+	router.GET("/albums/search", FindAlbumByFullTextSearch)
 
 	router.Run("localhost:8080")
 	fmt.Println("Server running on http://localhost:8080")
@@ -191,4 +192,28 @@ func deleteAlbum(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, gin.H{"message": "Album deleted successfully", "album": album})
+}
+func FindAlbumByFullTextSearch(c *gin.Context) {
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Query parameter 'q' is required"})
+		return
+	}
+	var albums []Album
+	rows, err := database.Query("SELECT id, title, artist, price FROM albums WHERE MATCH(title, artist) AGAINST(? IN NATURAL LANGUAGE MODE)", query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search albums"})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var album Album
+		if err := rows.Scan(&album.ID, &album.Title, &album.Artist, &album.Price); err != nil {
+			fmt.Println("Error scanning row:", err)
+			continue
+		}
+		albums = append(albums, album)
+	}
+	c.IndentedJSON(http.StatusOK, albums)
 }
