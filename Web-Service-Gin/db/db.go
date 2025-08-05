@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql" // MySQL driver
@@ -50,17 +51,20 @@ func New(cfg Config) (*DB, error) {
 
 // QueryRow executes a query that is expected to return at most one row.
 func (d *DB) QueryRow(query string, args ...interface{}) *sql.Row {
+	log.Printf("Executing query: %s with args: %v", query, args)
 	return d.DB.QueryRow(query, args...)
 }
 
 // Query executes a query that returns rows, typically a SELECT.
 func (d *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	log.Printf("Executing query: %s with args: %v", query, args)
 	return d.DB.Query(query, args...)
 }
 
 // Exec executes a query without returning any rows.
 // The args are for any placeholder parameters in the query.
 func (d *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
+	log.Printf("Executing exec query: %s with args: %v", query, args)
 	return d.DB.Exec(query, args...)
 }
 
