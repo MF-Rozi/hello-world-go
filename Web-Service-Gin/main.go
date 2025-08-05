@@ -67,13 +67,42 @@ func main() {
 }
 
 func getAlbums(c *gin.Context) {
-	var albums []Album
-	albm, err := database.Query("SELECT id, title, artist, price FROM albums")
+	// Get pagination parameters from query string
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "10")
 
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		c.JSON(400, gin.H{"error": "Invalid page number"})
+		return
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 100 {
+		c.JSON(400, gin.H{"error": "Invalid limit (1-100)"})
+		return
+	}
+
+	// Calculate offset
+	offset := (page - 1) * limit
+
+	// Get total count
+	var total int
+	countRow := database.QueryRow("SELECT COUNT(*) FROM albums")
+	if err := countRow.Scan(&total); err != nil {
+		c.JSON(500, gin.H{"error": "Failed to count albums"})
+		return
+	}
+
+	// Get paginated albums
+	var albums []Album
+	albm, err := database.Query("SELECT id, title, artist, price FROM albums LIMIT ? OFFSET ?", limit, offset)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to fetch albums"})
 		return
 	}
+	defer albm.Close()
+
 	for albm.Next() {
 		var album Album
 		if err := albm.Scan(&album.ID, &album.Title, &album.Artist, &album.Price); err != nil {
@@ -82,7 +111,24 @@ func getAlbums(c *gin.Context) {
 		}
 		albums = append(albums, album)
 	}
-	c.IndentedJSON(http.StatusOK, albums)
+
+	// Calculate pagination metadata
+	totalPages := (total + limit - 1) / limit // Ceiling division
+	hasNext := page < totalPages
+	hasPrev := page > 1
+
+	// Return paginated response
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"data": albums,
+		"pagination": gin.H{
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
+			"total_pages": totalPages,
+			"has_next":    hasNext,
+			"has_prev":    hasPrev,
+		},
+	})
 }
 
 func getAlbumByID(c *gin.Context) {
@@ -99,13 +145,36 @@ func getAlbumByID(c *gin.Context) {
 
 func GetAlbumByName(c *gin.Context) {
 	name := c.Param("name")
-	var albums []Album
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "10")
 
-	rows, err := database.Query("SELECT id, title, artist, price FROM albums WHERE title LIKE ?", "%"+name+"%")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 100 {
+		limit = 10
+	}
+
+	offset := (page - 1) * limit
+	searchTerm := "%" + name + "%"
+
+	// Get total count for this search
+	var total int
+	countRow := database.QueryRow("SELECT COUNT(*) FROM albums WHERE title LIKE ?", searchTerm)
+	countRow.Scan(&total)
+
+	// Get paginated results
+	var albums []Album
+	rows, err := database.Query("SELECT id, title, artist, price FROM albums WHERE title LIKE ? LIMIT ? OFFSET ?", searchTerm, limit, offset)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to fetch albums"})
 		return
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var album Album
 		if err := rows.Scan(&album.ID, &album.Title, &album.Artist, &album.Price); err != nil {
@@ -114,7 +183,20 @@ func GetAlbumByName(c *gin.Context) {
 		}
 		albums = append(albums, album)
 	}
-	c.IndentedJSON(http.StatusOK, albums)
+
+	totalPages := (total + limit - 1) / limit
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"data": albums,
+		"pagination": gin.H{
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
+			"total_pages": totalPages,
+			"has_next":    page < totalPages,
+			"has_prev":    page > 1,
+		},
+	})
 }
 
 func AddAlbum(c *gin.Context) {
