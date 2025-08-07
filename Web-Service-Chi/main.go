@@ -2,10 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"dev.mfr/web-service-chi/db"
 
@@ -47,6 +49,8 @@ func main() {
 	fmt.Println("Connected to database successfully!")
 
 	queries = db.New(database)
+	// Create table if it doesnt exist
+	createTables()
 
 	chi := chi.NewRouter()
 	chi.Use(middleware.Logger)
@@ -55,6 +59,58 @@ func main() {
 	chi.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Welcome to the Chi Web Service!")
 	})
+	chi.Get("/albums", getAlbums)
 
 	http.ListenAndServe(":8080", chi)
+
+}
+
+func getAlbums(w http.ResponseWriter, r *http.Request) {
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil || limit <= 0 {
+		limit = 10 // Default limit
+	}
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil || offset < 0 {
+		offset = 0 // Default offset
+	}
+	var albumsRow []db.GetAlbumsRow
+	albumsRow, err = queries.GetAlbums(r.Context(), db.GetAlbumsParams{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching albums: %v", err), http.StatusInternalServerError)
+		return
+	}
+	var Albums []db.Album
+	for _, row := range albumsRow {
+		Albums = append(Albums, db.Album{
+			ID:     row.ID,
+			Title:  row.Title,
+			Artist: row.Artist,
+			Price:  row.Price,
+		})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(Albums); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding albums: %v", err), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("Fetched albums successfully!")
+
+}
+func createTables() {
+	// Create the albums table if it doesn't exist
+	_, err := database.Exec(`
+	CREATE TABLE IF NOT EXISTS albums (
+		id SERIAL PRIMARY KEY,
+		title VARCHAR(255) NOT NULL,
+		artist VARCHAR(255) NOT NULL,
+		price DECIMAL(10, 2) NOT NULL
+	);`)
+	if err != nil {
+		log.Fatalf("Error creating albums table: %v\n", err)
+	}
+	fmt.Println("Albums table created successfully!")
 }
