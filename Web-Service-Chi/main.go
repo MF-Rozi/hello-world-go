@@ -71,10 +71,18 @@ func getAlbums(w http.ResponseWriter, r *http.Request) {
 	if err != nil || limit <= 0 {
 		limit = 10 // Default limit
 	}
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page <= 0 {
+		page = 1 // Default page
+	}
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 	if err != nil || offset < 0 {
 		offset = 0 // Default offset
 	}
+	if offset == 0 {
+		offset = (page - 1) * limit
+	}
+
 	var albumsRow []db.GetAlbumsRow
 	albumsRow, err = queries.GetAlbums(r.Context(), db.GetAlbumsParams{
 		Limit:  int32(limit),
