@@ -60,6 +60,7 @@ func main() {
 		fmt.Fprintln(w, "Welcome to the Chi Web Service!")
 	})
 	chi.Get("/albums", getAlbums)
+	chi.Post("/albums", addAlbum)
 
 	http.ListenAndServe(":8080", chi)
 
@@ -113,4 +114,34 @@ func createTables() {
 		log.Fatalf("Error creating albums table: %v\n", err)
 	}
 	fmt.Println("Albums table created successfully!")
+}
+func addAlbum(w http.ResponseWriter, r *http.Request) {
+	var album db.Album
+	if err := json.NewDecoder(r.Body).Decode(&album); err != nil {
+		http.Error(w, fmt.Sprintf("Error decoding album: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	price, err := strconv.ParseFloat(album.Price, 64)
+	if err != nil || album.Title == "" || album.Artist == "" || price <= 0 {
+		http.Error(w, "Invalid album data", http.StatusBadRequest)
+		return
+	}
+
+	newAlbum, err := queries.CreateAlbum(r.Context(), db.CreateAlbumParams{
+		Title:  album.Title,
+		Artist: album.Artist,
+		Price:  album.Price,
+	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error creating album: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(newAlbum); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding new album: %v", err), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("Album added successfully!")
 }
