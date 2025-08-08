@@ -61,6 +61,7 @@ func main() {
 	})
 	chi.Get("/albums", getAlbums)
 	chi.Post("/albums", addAlbum)
+	chi.Put("/albums/{id}", updateAlbum)
 
 	http.ListenAndServe(":8080", chi)
 
@@ -152,4 +153,41 @@ func addAlbum(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Println("Album added successfully!")
+}
+func updateAlbum(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		http.Error(w, "Invalid album ID", http.StatusBadRequest)
+		return
+	}
+	var album db.Album
+	if err := json.NewDecoder(r.Body).Decode(&album); err != nil {
+		http.Error(w, fmt.Sprintf("Error decoding album: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	price, err := strconv.ParseFloat(album.Price, 64)
+	if err != nil || album.Title == "" || album.Artist == "" || price <= 0 {
+		http.Error(w, "Invalid album data", http.StatusBadRequest)
+		return
+	}
+
+	updatedAlbum, err := queries.UpdateAlbum(r.Context(), db.UpdateAlbumParams{
+		ID:     int32(id),
+		Title:  album.Title,
+		Artist: album.Artist,
+		Price:  album.Price,
+	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error updating album: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(updatedAlbum); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding updated album: %v", err), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("Album updated successfully!")
 }
