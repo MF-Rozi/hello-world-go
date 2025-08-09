@@ -7,12 +7,15 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createAlbum = `-- name: CreateAlbum :one
 INSERT INTO
     albums (title, artist, price)
-VALUES ($1, $2, $3) RETURNING id,
+VALUES ($1, $2, $3)
+RETURNING
+    id,
     title,
     artist,
     price
@@ -75,6 +78,58 @@ func (q *Queries) GetAlbumByID(ctx context.Context, id int32) (GetAlbumByIDRow, 
 	return i, err
 }
 
+const getAlbumByTitle = `-- name: GetAlbumByTitle :many
+SELECT id, title, artist, price
+FROM albums
+WHERE
+    title ILIKE '%' || $3 || '%'
+ORDER BY id
+LIMIT $1
+OFFSET
+    $2
+`
+
+type GetAlbumByTitleParams struct {
+	Limit  int32          `json:"limit"`
+	Offset int32          `json:"offset"`
+	Title  sql.NullString `json:"title"`
+}
+
+type GetAlbumByTitleRow struct {
+	ID     int32  `json:"id"`
+	Title  string `json:"title"`
+	Artist string `json:"artist"`
+	Price  string `json:"price"`
+}
+
+func (q *Queries) GetAlbumByTitle(ctx context.Context, arg GetAlbumByTitleParams) ([]GetAlbumByTitleRow, error) {
+	rows, err := q.query(ctx, q.getAlbumByTitleStmt, getAlbumByTitle, arg.Limit, arg.Offset, arg.Title)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAlbumByTitleRow
+	for rows.Next() {
+		var i GetAlbumByTitleRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Artist,
+			&i.Price,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAlbums = `-- name: GetAlbums :many
 SELECT id, title, artist, price
 FROM albums
@@ -124,6 +179,113 @@ func (q *Queries) GetAlbums(ctx context.Context, arg GetAlbumsParams) ([]GetAlbu
 	return items, nil
 }
 
+const getAlbumsByArtist = `-- name: GetAlbumsByArtist :many
+SELECT id, title, artist, price
+FROM albums
+WHERE
+    artist ILIKE '%' || $1 || '%'
+ORDER BY id
+LIMIT $2
+OFFSET
+    $3
+`
+
+type GetAlbumsByArtistParams struct {
+	Column1 sql.NullString `json:"column_1"`
+	Limit   int32          `json:"limit"`
+	Offset  int32          `json:"offset"`
+}
+
+type GetAlbumsByArtistRow struct {
+	ID     int32  `json:"id"`
+	Title  string `json:"title"`
+	Artist string `json:"artist"`
+	Price  string `json:"price"`
+}
+
+func (q *Queries) GetAlbumsByArtist(ctx context.Context, arg GetAlbumsByArtistParams) ([]GetAlbumsByArtistRow, error) {
+	rows, err := q.query(ctx, q.getAlbumsByArtistStmt, getAlbumsByArtist, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAlbumsByArtistRow
+	for rows.Next() {
+		var i GetAlbumsByArtistRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Artist,
+			&i.Price,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAlbumsByFullTextSearch = `-- name: GetAlbumsByFullTextSearch :many
+SELECT id, title, artist, price
+FROM albums
+WHERE
+    to_tsvector(
+        'english',
+        title || ' ' || artist
+    ) @@ plainto_tsquery($1)
+ORDER BY id
+LIMIT $2
+OFFSET
+    $3
+`
+
+type GetAlbumsByFullTextSearchParams struct {
+	PlaintoTsquery string `json:"plainto_tsquery"`
+	Limit          int32  `json:"limit"`
+	Offset         int32  `json:"offset"`
+}
+
+type GetAlbumsByFullTextSearchRow struct {
+	ID     int32  `json:"id"`
+	Title  string `json:"title"`
+	Artist string `json:"artist"`
+	Price  string `json:"price"`
+}
+
+func (q *Queries) GetAlbumsByFullTextSearch(ctx context.Context, arg GetAlbumsByFullTextSearchParams) ([]GetAlbumsByFullTextSearchRow, error) {
+	rows, err := q.query(ctx, q.getAlbumsByFullTextSearchStmt, getAlbumsByFullTextSearch, arg.PlaintoTsquery, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAlbumsByFullTextSearchRow
+	for rows.Next() {
+		var i GetAlbumsByFullTextSearchRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Artist,
+			&i.Price,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateAlbum = `-- name: UpdateAlbum :one
 UPDATE albums
 SET
@@ -131,7 +293,9 @@ SET
     artist = $3,
     price = $4
 WHERE
-    id = $1 RETURNING id,
+    id = $1
+RETURNING
+    id,
     title,
     artist,
     price

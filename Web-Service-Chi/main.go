@@ -62,6 +62,7 @@ func main() {
 	chi.Get("/albums", getAlbums)
 	chi.Post("/albums", addAlbum)
 	chi.Put("/albums/{id}", updateAlbum)
+	chi.Get("/albums/name/{name}", findAlbumByName)
 
 	http.ListenAndServe(":8080", chi)
 
@@ -190,4 +191,48 @@ func updateAlbum(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Println("Album updated successfully!")
+}
+func findAlbumByName(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	if name == "" {
+		http.Error(w, "Album name is required", http.StatusBadRequest)
+		return
+	}
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil || limit <= 0 {
+		limit = 10 // Default limit
+	}
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page <= 0 {
+		page = 1 // Default page
+	}
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil || offset < 0 {
+		offset = 0 // Default offset
+	}
+	if offset == 0 {
+		offset = (page - 1) * limit
+	}
+
+	albumsRow, err := queries.GetAlbumByTitle(r.Context(), db.GetAlbumByTitleParams{
+		Title:  sql.NullString{String: name, Valid: true},
+		Limit:  (int32)(limit),
+		Offset: (int32)(offset),
+	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching album by name: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if len(albumsRow) == 0 {
+		http.Error(w, "Album not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(albumsRow); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding album: %v", err), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("Fetched album by name successfully!")
 }

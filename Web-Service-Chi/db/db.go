@@ -33,8 +33,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getAlbumByIDStmt, err = db.PrepareContext(ctx, getAlbumByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAlbumByID: %w", err)
 	}
+	if q.getAlbumByTitleStmt, err = db.PrepareContext(ctx, getAlbumByTitle); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAlbumByTitle: %w", err)
+	}
 	if q.getAlbumsStmt, err = db.PrepareContext(ctx, getAlbums); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAlbums: %w", err)
+	}
+	if q.getAlbumsByArtistStmt, err = db.PrepareContext(ctx, getAlbumsByArtist); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAlbumsByArtist: %w", err)
+	}
+	if q.getAlbumsByFullTextSearchStmt, err = db.PrepareContext(ctx, getAlbumsByFullTextSearch); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAlbumsByFullTextSearch: %w", err)
 	}
 	if q.updateAlbumStmt, err = db.PrepareContext(ctx, updateAlbum); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateAlbum: %w", err)
@@ -59,9 +68,24 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getAlbumByIDStmt: %w", cerr)
 		}
 	}
+	if q.getAlbumByTitleStmt != nil {
+		if cerr := q.getAlbumByTitleStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAlbumByTitleStmt: %w", cerr)
+		}
+	}
 	if q.getAlbumsStmt != nil {
 		if cerr := q.getAlbumsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAlbumsStmt: %w", cerr)
+		}
+	}
+	if q.getAlbumsByArtistStmt != nil {
+		if cerr := q.getAlbumsByArtistStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAlbumsByArtistStmt: %w", cerr)
+		}
+	}
+	if q.getAlbumsByFullTextSearchStmt != nil {
+		if cerr := q.getAlbumsByFullTextSearchStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAlbumsByFullTextSearchStmt: %w", cerr)
 		}
 	}
 	if q.updateAlbumStmt != nil {
@@ -106,23 +130,29 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db               DBTX
-	tx               *sql.Tx
-	createAlbumStmt  *sql.Stmt
-	deleteAlbumStmt  *sql.Stmt
-	getAlbumByIDStmt *sql.Stmt
-	getAlbumsStmt    *sql.Stmt
-	updateAlbumStmt  *sql.Stmt
+	db                            DBTX
+	tx                            *sql.Tx
+	createAlbumStmt               *sql.Stmt
+	deleteAlbumStmt               *sql.Stmt
+	getAlbumByIDStmt              *sql.Stmt
+	getAlbumByTitleStmt           *sql.Stmt
+	getAlbumsStmt                 *sql.Stmt
+	getAlbumsByArtistStmt         *sql.Stmt
+	getAlbumsByFullTextSearchStmt *sql.Stmt
+	updateAlbumStmt               *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:               tx,
-		tx:               tx,
-		createAlbumStmt:  q.createAlbumStmt,
-		deleteAlbumStmt:  q.deleteAlbumStmt,
-		getAlbumByIDStmt: q.getAlbumByIDStmt,
-		getAlbumsStmt:    q.getAlbumsStmt,
-		updateAlbumStmt:  q.updateAlbumStmt,
+		db:                            tx,
+		tx:                            tx,
+		createAlbumStmt:               q.createAlbumStmt,
+		deleteAlbumStmt:               q.deleteAlbumStmt,
+		getAlbumByIDStmt:              q.getAlbumByIDStmt,
+		getAlbumByTitleStmt:           q.getAlbumByTitleStmt,
+		getAlbumsStmt:                 q.getAlbumsStmt,
+		getAlbumsByArtistStmt:         q.getAlbumsByArtistStmt,
+		getAlbumsByFullTextSearchStmt: q.getAlbumsByFullTextSearchStmt,
+		updateAlbumStmt:               q.updateAlbumStmt,
 	}
 }

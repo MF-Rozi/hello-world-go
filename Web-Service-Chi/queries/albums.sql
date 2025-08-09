@@ -12,7 +12,9 @@ SELECT id, title, artist, price FROM albums WHERE id = $1;
 -- name: CreateAlbum :one
 INSERT INTO
     albums (title, artist, price)
-VALUES ($1, $2, $3) RETURNING id,
+VALUES ($1, $2, $3)
+RETURNING
+    id,
     title,
     artist,
     price;
@@ -24,10 +26,45 @@ SET
     artist = $3,
     price = $4
 WHERE
-    id = $1 RETURNING id,
+    id = $1
+RETURNING
+    id,
     title,
     artist,
     price;
 
 -- name: DeleteAlbum :exec
 DELETE FROM albums WHERE id = $1;
+
+-- name: GetAlbumByTitle :many
+SELECT id, title, artist, price
+FROM albums
+WHERE
+    title ILIKE '%' || sqlc.arg (title) || '%'
+ORDER BY id
+LIMIT $1
+OFFSET
+    $2;
+
+-- name: GetAlbumsByArtist :many
+SELECT id, title, artist, price
+FROM albums
+WHERE
+    artist ILIKE '%' || $1 || '%'
+ORDER BY id
+LIMIT $2
+OFFSET
+    $3;
+
+-- name: GetAlbumsByFullTextSearch :many
+SELECT id, title, artist, price
+FROM albums
+WHERE
+    to_tsvector(
+        'english',
+        title || ' ' || artist
+    ) @@ plainto_tsquery($1)
+ORDER BY id
+LIMIT $2
+OFFSET
+    $3;
