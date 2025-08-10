@@ -225,3 +225,38 @@ func findAlbumByName(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Fetched album by name successfully!")
 }
+
+func GetAlbumsByArtist(w http.ResponseWriter, r *http.Request) {
+	artist := chi.URLParam(r, "artist")
+	if artist == "" {
+		http.Error(w, "Artist name is required", http.StatusBadRequest)
+		return
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil || limit <= 0 {
+		limit = 10 // Default limit
+	}
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page <= 0 {
+		page = 1 // Default page
+	}
+	offset := (page - 1) * limit
+
+	AlbumRows, err := queries.GetAlbumsByArtist(r.Context(), db.GetAlbumsByArtistParams{
+		Artist: sql.NullString{String: artist, Valid: true},
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error querying albums by artist: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(AlbumRows); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding albums by artist: %v", err), http.StatusInternalServerError)
+		return
+	}
+	fmt.Printf("Fetched albums by %s successfully!\n", artist)
+}

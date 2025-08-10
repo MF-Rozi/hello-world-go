@@ -183,17 +183,17 @@ const getAlbumsByArtist = `-- name: GetAlbumsByArtist :many
 SELECT id, title, artist, price
 FROM albums
 WHERE
-    artist ILIKE '%' || $1 || '%'
+    artist ILIKE '%' || $3 || '%'
 ORDER BY id
-LIMIT $2
+LIMIT $1
 OFFSET
-    $3
+    $2
 `
 
 type GetAlbumsByArtistParams struct {
-	Column1 sql.NullString `json:"column_1"`
-	Limit   int32          `json:"limit"`
-	Offset  int32          `json:"offset"`
+	Limit  int32          `json:"limit"`
+	Offset int32          `json:"offset"`
+	Artist sql.NullString `json:"artist"`
 }
 
 type GetAlbumsByArtistRow struct {
@@ -204,7 +204,7 @@ type GetAlbumsByArtistRow struct {
 }
 
 func (q *Queries) GetAlbumsByArtist(ctx context.Context, arg GetAlbumsByArtistParams) ([]GetAlbumsByArtistRow, error) {
-	rows, err := q.query(ctx, q.getAlbumsByArtistStmt, getAlbumsByArtist, arg.Column1, arg.Limit, arg.Offset)
+	rows, err := q.query(ctx, q.getAlbumsByArtistStmt, getAlbumsByArtist, arg.Limit, arg.Offset, arg.Artist)
 	if err != nil {
 		return nil, err
 	}

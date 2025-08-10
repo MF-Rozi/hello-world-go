@@ -50,11 +50,11 @@ OFFSET
 SELECT id, title, artist, price
 FROM albums
 WHERE
-    artist ILIKE '%' || $1 || '%'
+    artist ILIKE '%' || sqlc.arg (artist) || '%'
 ORDER BY id
-LIMIT $2
+LIMIT $1
 OFFSET
-    $3;
+    $2;
 
 -- name: GetAlbumsByFullTextSearch :many
 SELECT id, title, artist, price
