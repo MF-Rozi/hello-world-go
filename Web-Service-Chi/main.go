@@ -63,6 +63,8 @@ func main() {
 	chi.Post("/albums", addAlbum)
 	chi.Put("/albums/{id}", updateAlbum)
 	chi.Get("/albums/name/{name}", findAlbumByName)
+	chi.Get("/albums/artist/{artist}", GetAlbumsByArtist)
+	chi.Get("/albums/search", getAlbumsByFullTextSearch)
 
 	http.ListenAndServe(":8080", chi)
 
@@ -259,4 +261,38 @@ func GetAlbumsByArtist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Printf("Fetched albums by %s successfully!\n", artist)
+}
+func getAlbumsByFullTextSearch(w http.ResponseWriter, r *http.Request) {
+	searchTerm := r.URL.Query().Get("search")
+	if searchTerm == "" {
+		http.Error(w, "Search term is required", http.StatusBadRequest)
+		return
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil || limit <= 0 {
+		limit = 10 // Default limit
+	}
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page <= 0 {
+		page = 1 // Default page
+	}
+	offset := (page - 1) * limit
+
+	albumsRow, err := queries.GetAlbumsByFullTextSearch(r.Context(), db.GetAlbumsByFullTextSearchParams{
+		PlaintoTsquery: searchTerm,
+		Limit:          int32(limit),
+		Offset:         int32(offset),
+	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching albums by full text search: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(albumsRow); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding albums by full text search: %v", err), http.StatusInternalServerError)
+		return
+	}
+	fmt.Printf("Fetched albums by full text search '%s' successfully!\n", searchTerm)
 }
