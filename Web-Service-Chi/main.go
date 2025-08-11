@@ -65,6 +65,7 @@ func main() {
 	chi.Get("/albums/name/{name}", findAlbumByName)
 	chi.Get("/albums/artist/{artist}", GetAlbumsByArtist)
 	chi.Get("/albums/search", getAlbumsByFullTextSearch)
+	chi.Delete("/albums/{id}", deleteAlbum)
 
 	http.ListenAndServe(":8080", chi)
 
@@ -295,4 +296,24 @@ func getAlbumsByFullTextSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Printf("Fetched albums by full text search '%s' successfully!\n", searchTerm)
+}
+
+func deleteAlbum(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		http.Error(w, "Album ID is required", http.StatusBadRequest)
+		return
+	}
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid album ID: %v", err), http.StatusBadRequest)
+		return
+	}
+	if err := queries.DeleteAlbum(r.Context(), (int32)(idInt)); err != nil {
+		http.Error(w, fmt.Sprintf("Error deleting album: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	fmt.Println("Album deleted successfully!")
 }
