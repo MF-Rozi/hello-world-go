@@ -309,11 +309,23 @@ func deleteAlbum(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Invalid album ID: %v", err), http.StatusBadRequest)
 		return
 	}
+	deletedAlbum, err := queries.GetAlbumByID(r.Context(), int32(idInt))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching deleted album: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	if err := queries.DeleteAlbum(r.Context(), (int32)(idInt)); err != nil {
 		http.Error(w, fmt.Sprintf("Error deleting album: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	response := map[string]interface{}{
+		"message": "Album deleted successfully",
+		"album":   deletedAlbum,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 	fmt.Println("Album deleted successfully!")
 }
