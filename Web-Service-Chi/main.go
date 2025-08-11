@@ -66,6 +66,7 @@ func main() {
 	chi.Get("/albums/artist/{artist}", GetAlbumsByArtist)
 	chi.Get("/albums/search", getAlbumsByFullTextSearch)
 	chi.Delete("/albums/{id}", deleteAlbum)
+	chi.Get("/albums/{id}", getAlbumByID)
 
 	http.ListenAndServe(":8080", chi)
 
@@ -328,4 +329,26 @@ func deleteAlbum(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 	fmt.Println("Album deleted successfully!")
+}
+
+func getAlbumByID(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		http.Error(w, "Invalid album ID", http.StatusBadRequest)
+		return
+	}
+
+	album, err := queries.GetAlbumByID(r.Context(), int32(id))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching album by ID: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(album); err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding album: %v", err), http.StatusInternalServerError)
+		return
+	}
+	fmt.Printf("Fetched album by ID %d successfully!\n", id)
 }
