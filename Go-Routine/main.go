@@ -50,16 +50,37 @@ func weather(w http.ResponseWriter, r *http.Request) {
 		host = ip
 	}
 
+	ipInfo, err := getIpGeolocation(host)
+	if err != nil {
+		http.Error(w, "Failed to get IP geolocation", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	response := map[string]string{
 		"request_id": reqID,
 		"client_ip":  host,
-		"weather":    getWeather(),
+		"weather":    getWeather(ipInfo["latitude"].(float64), ipInfo["longitude"].(float64)),
 	}
 	json.NewEncoder(w).Encode(response)
 }
 
-func getWeather() string {
+func getWeather(lat float64, lon float64) string {
 	// Simulate a weather API call
+	if lat == 0 && lon == 0 {
+		return "Unknown"
+	}
 	return "Sunny, 25°C"
+}
+
+func getIpGeolocation(ip string) (map[string]interface{}, error) {
+	// Simulate an IP geolocation API call
+	return map[string]interface{}{
+		"ip":        ip,
+		"latitude":  37.7749,
+		"longitude": -122.4194,
+		"country":   "Wonderland",
+		"region":    "Fictional",
+		"city":      "Imaginary",
+	}, nil
 }
