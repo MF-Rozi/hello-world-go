@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"dev.mfr/go-routine/models"
 )
 
 func main() {
@@ -55,22 +57,33 @@ func weather(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get IP geolocation", http.StatusInternalServerError)
 		return
 	}
-
+	cond, ok := getWeather(ipInfo["latitude"].(float64), ipInfo["longitude"].(float64))
 	w.Header().Set("Content-Type", "application/json")
-	response := map[string]string{
+	if !ok {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"request_id": reqID,
+			"client_ip":  host,
+			"weather":    "Unknown",
+		})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"request_id": reqID,
 		"client_ip":  host,
-		"weather":    getWeather(ipInfo["latitude"].(float64), ipInfo["longitude"].(float64)),
-	}
-	json.NewEncoder(w).Encode(response)
+		"weather":    cond,
+	})
 }
 
-func getWeather(lat float64, lon float64) string {
+func getWeather(lat float64, lon float64) (models.Condition, bool) {
 	// Simulate a weather API call
 	if lat == 0 && lon == 0 {
-		return "Unknown"
+		return models.Condition{Description: "Unknown"}, false
 	}
-	return "Sunny, 25°C"
+	weatherCode, success := models.GetCondition(10, false)
+	if !success {
+		return models.Condition{Description: "Unknown"}, false
+	}
+	return weatherCode, true
 }
 
 func getIpGeolocation(ip string) (map[string]interface{}, error) {
