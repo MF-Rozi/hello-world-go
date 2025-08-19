@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -17,6 +18,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
 
 	r.Get("/", index)
 	r.Get("/weather", weather)
@@ -45,14 +47,27 @@ func index(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(response)
 }
+
+// clientIP returns the best-effort real client IP, honoring common proxy headers.
+func clientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		return strings.TrimSpace(parts[0])
+	}
+	if rip := r.Header.Get("X-Real-IP"); rip != "" {
+		return rip
+	}
+	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return ip
+	}
+	return r.RemoteAddr
+}
+
 func weather(w http.ResponseWriter, r *http.Request) {
 	reqID := middleware.GetReqID(r.Context())
-	host := r.RemoteAddr
-	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		host = ip
-	}
+	ip := clientIP(r)
 
-	ipInfo, err := getIpGeolocation(host)
+	ipInfo, err := getIpGeolocation(ip)
 	if err != nil {
 		http.Error(w, "Failed to get IP geolocation", http.StatusInternalServerError)
 		return
@@ -62,14 +77,14 @@ func weather(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"request_id": reqID,
-			"client_ip":  host,
+			"client_ip":  ip,
 			"weather":    "Unknown",
 		})
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"request_id": reqID,
-		"client_ip":  host,
+		"client_ip":  ip,
 		"weather":    cond,
 	})
 }
@@ -79,7 +94,7 @@ func getWeather(lat float64, lon float64) (models.Condition, bool) {
 	if lat == 0 && lon == 0 {
 		return models.Condition{Description: "Unknown"}, false
 	}
-	weatherCode, success := models.GetCondition(10, false)
+	weatherCode, success := models.GetCondition(0, true)
 	if !success {
 		return models.Condition{Description: "Unknown"}, false
 	}
