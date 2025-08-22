@@ -72,12 +72,32 @@ func weather(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get IP geolocation", http.StatusInternalServerError)
 		return
 	}
+
+	if loc, ok := ipInfo["loc"].(string); ok {
+		var lat, lon float64
+		if _, err := fmt.Sscanf(loc, "%f,%f", &lat, &lon); err == nil {
+			ipInfo["latitude"] = lat
+			ipInfo["longitude"] = lon
+		} else {
+			fmt.Printf("failed to parse loc %q: %v\n", loc, err)
+		}
+	}
+
+	// Ensure latitude/longitude are present to avoid panics later
+	if _, ok := ipInfo["latitude"].(float64); !ok {
+		ipInfo["latitude"] = float64(0)
+	}
+	if _, ok := ipInfo["longitude"].(float64); !ok {
+		ipInfo["longitude"] = float64(0)
+	}
+
 	cond, ok := getWeather(ipInfo["latitude"].(float64), ipInfo["longitude"].(float64))
 	w.Header().Set("Content-Type", "application/json")
 	if !ok {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"request_id": reqID,
 			"client_ip":  ip,
+			"ip_info":    ipInfo,
 			"weather":    "Unknown",
 		})
 		return
@@ -85,6 +105,7 @@ func weather(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"request_id": reqID,
 		"client_ip":  ip,
+		"ip_info":    ipInfo,
 		"weather":    cond,
 	})
 }
@@ -102,13 +123,30 @@ func getWeather(lat float64, lon float64) (models.Condition, bool) {
 }
 
 func getIpGeolocation(ip string) (map[string]interface{}, error) {
+
+	url := fmt.Sprintf("https://ipinfo.io/%s/json", ip)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get IP geolocation: %s", resp.Status)
+	}
+	var ipInfo map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&ipInfo); err != nil {
+		return nil, err
+	}
+	return ipInfo, nil
 	// Simulate an IP geolocation API call
-	return map[string]interface{}{
-		"ip":        ip,
-		"latitude":  37.7749,
-		"longitude": -122.4194,
-		"country":   "Wonderland",
-		"region":    "Fictional",
-		"city":      "Imaginary",
-	}, nil
+	// return map[string]interface{}{
+	// 	"ip":        ip,
+	// 	"latitude":  37.7749,
+	// 	"longitude": -122.4194,
+	// 	"country":   "Wonderland",
+	// 	"region":    "Fictional",
+	// 	"city":      "Imaginary",
+	// }, nil
 }
