@@ -94,7 +94,7 @@ func weather(w http.ResponseWriter, r *http.Request) {
 	cond, ok := getWeather(ipInfo["latitude"].(float64), ipInfo["longitude"].(float64))
 	w.Header().Set("Content-Type", "application/json")
 	if !ok {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
 			"request_id": reqID,
 			"client_ip":  ip,
 			"ip_info":    ipInfo,
@@ -102,7 +102,7 @@ func weather(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	json.NewEncoder(w).Encode(map[string]any{
 		"request_id": reqID,
 		"client_ip":  ip,
 		"ip_info":    ipInfo,
@@ -122,7 +122,7 @@ func getWeather(lat float64, lon float64) (models.Condition, bool) {
 	return weatherCode, true
 }
 
-func getIpGeolocation(ip string) (map[string]interface{}, error) {
+func getIpGeolocation(ip string) (map[string]any, error) {
 
 	url := fmt.Sprintf("https://ipinfo.io/%s/json", ip)
 
@@ -141,7 +141,7 @@ func getIpGeolocation(ip string) (map[string]interface{}, error) {
 	}
 	return ipInfo, nil
 	// Simulate an IP geolocation API call
-	// return map[string]interface{}{
+	// return map[string]any{
 	// 	"ip":        ip,
 	// 	"latitude":  37.7749,
 	// 	"longitude": -122.4194,
