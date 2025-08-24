@@ -73,6 +73,32 @@ func weather(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If connecting locally/private and no "loc" from ipinfo, set default coords
+	if func(ip string) bool {
+		p := net.ParseIP(ip)
+		if p == nil {
+			return false
+		}
+		if p.IsLoopback() {
+			return true
+		}
+		if v4 := p.To4(); v4 != nil {
+			if v4[0] == 10 {
+				return true
+			}
+			if v4[0] == 172 && v4[1] >= 16 && v4[1] <= 31 {
+				return true
+			}
+			if v4[0] == 192 && v4[1] == 168 {
+				return true
+			}
+		}
+		return false
+	}(ip) {
+		if loc, ok := ipInfo["loc"].(string); !ok || strings.TrimSpace(loc) == "" {
+			ipInfo["loc"] = "0.5167,101.4417"
+		}
+	}
 	if loc, ok := ipInfo["loc"].(string); ok {
 		var lat, lon float64
 		if _, err := fmt.Sscanf(loc, "%f,%f", &lat, &lon); err == nil {
