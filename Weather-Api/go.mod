@@ -1,4 +1,4 @@
-module dev.mfr/go-routine
+module dev.mfr/weather-api
 
 go 1.24.5
 
