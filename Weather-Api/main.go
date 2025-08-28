@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"dev.mfr/go-routine/models"
+	"dev.mfr/weather-api/models"
 )
 
 func main() {
