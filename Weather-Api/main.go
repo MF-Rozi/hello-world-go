@@ -13,6 +13,60 @@ import (
 	"dev.mfr/weather-api/models"
 )
 
+// OpenMeteoResponse represents the subset of fields we consume from the
+// Open-Meteo API current weather endpoint.
+type OpenMeteoResponse struct {
+	Latitude             float64      `json:"latitude"`
+	Longitude            float64      `json:"longitude"`
+	GenerationTimeMs     float64      `json:"generationtime_ms"`
+	UtcOffsetSeconds     int          `json:"utc_offset_seconds"`
+	Timezone             string       `json:"timezone"`
+	TimezoneAbbreviation string       `json:"timezone_abbreviation"`
+	Elevation            float64      `json:"elevation"`
+	CurrentUnits         Units        `json:"current_units"`
+	Current              CurrentBlock `json:"current"`
+}
+
+type Units struct {
+	Time                string `json:"time"`
+	Interval            string `json:"interval"`
+	Temperature2m       string `json:"temperature_2m"`
+	IsDay               string `json:"is_day"`
+	ApparentTemperature string `json:"apparent_temperature"`
+	Precipitation       string `json:"precipitation"`
+	Rain                string `json:"rain"`
+	Showers             string `json:"showers"`
+	Snowfall            string `json:"snowfall"`
+	CloudCover          string `json:"cloud_cover"`
+	WindSpeed10m        string `json:"wind_speed_10m"`
+	WindDirection10m    string `json:"wind_direction_10m"`
+	WindGusts10m        string `json:"wind_gusts_10m"`
+	RelativeHumidity2m  string `json:"relative_humidity_2m"`
+	WeatherCode         string `json:"weather_code"`
+	PressureMsl         string `json:"pressure_msl"`
+	SurfacePressure     string `json:"surface_pressure"`
+}
+
+type CurrentBlock struct {
+	Time                string  `json:"time"`
+	Interval            int     `json:"interval"`
+	Temperature2m       float64 `json:"temperature_2m"`
+	IsDay               int     `json:"is_day"`
+	ApparentTemperature float64 `json:"apparent_temperature"`
+	Precipitation       float64 `json:"precipitation"`
+	Rain                float64 `json:"rain"`
+	Showers             float64 `json:"showers"`
+	Snowfall            float64 `json:"snowfall"`
+	CloudCover          int     `json:"cloud_cover"`
+	WindSpeed10m        float64 `json:"wind_speed_10m"`
+	WindDirection10m    int     `json:"wind_direction_10m"`
+	WindGusts10m        float64 `json:"wind_gusts_10m"`
+	RelativeHumidity2m  int     `json:"relative_humidity_2m"`
+	WeatherCode         int     `json:"weather_code"`
+	PressureMsl         float64 `json:"pressure_msl"`
+	SurfacePressure     float64 `json:"surface_pressure"`
+}
+
 func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -136,16 +190,42 @@ func weather(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getWeather(lat float64, lon float64) (models.Condition, bool) {
-	// Simulate a weather API call
+func getWeather(lat float64, lon float64) (map[string]any, bool) {
+
 	if lat == 0 && lon == 0 {
-		return models.Condition{Description: "Unknown"}, false
+		return map[string]any{"description": "Unknown"}, false
 	}
-	weatherCode, success := models.GetCondition(0, true)
+
+	url := fmt.Sprintf("https://api.open-meteo.com/v1/forecast?latitude=%f&longitude=%f&current=temperature_2m,is_day,apparent_temperature,precipitation,rain,showers,snowfall,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,relative_humidity_2m,weather_code,pressure_msl,surface_pressure&timezone=auto", lat, lon)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return map[string]any{"description": "Unknown"}, false
+	}
+	defer resp.Body.Close()
+
+	var weatherData OpenMeteoResponse
+	if err := json.NewDecoder(resp.Body).Decode(&weatherData); err != nil {
+		return map[string]any{"description": "Unknown"}, false
+	}
+	isDay := weatherData.Current.IsDay == 1
+	weatherCode, success := models.GetCondition(weatherData.Current.WeatherCode, isDay)
 	if !success {
-		return models.Condition{Description: "Unknown"}, false
+		return map[string]any{"description": "Unknown"}, false
 	}
-	return weatherCode, true
+	return map[string]any{
+		"description":   weatherCode.Description,
+		"code":          weatherData.Current.WeatherCode,
+		"is_day":        weatherData.Current.IsDay,
+		"temp_c":        weatherData.Current.Temperature2m,
+		"apparent_c":    weatherData.Current.ApparentTemperature,
+		"wind_kmh":      weatherData.Current.WindSpeed10m,
+		"gust_kmh":      weatherData.Current.WindGusts10m,
+		"humidity":      weatherData.Current.RelativeHumidity2m,
+		"pressure_hpa":  weatherData.Current.PressureMsl,
+		"cloud_cover":   weatherData.Current.CloudCover,
+		"weather_image": weatherCode.Image,
+	}, true
 }
 
 func getIpGeolocation(ip string) (map[string]any, error) {
