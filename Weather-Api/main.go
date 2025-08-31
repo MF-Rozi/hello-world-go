@@ -76,6 +76,7 @@ func main() {
 
 	r.Get("/", index)
 	r.Get("/weather", weather)
+	r.Get("/ip", ipAddress)
 
 	fmt.Println("Starting server on :8080")
 	http.ListenAndServe(":8080", r)
@@ -255,4 +256,21 @@ func getIpGeolocation(ip string) (map[string]any, error) {
 	// 	"region":    "Fictional",
 	// 	"city":      "Imaginary",
 	// }, nil
+}
+
+func ipAddress(w http.ResponseWriter, r *http.Request) {
+	reqID := middleware.GetReqID(r.Context())
+	ip := clientIP(r)
+
+	ipInfo, err := getIpGeolocation(ip)
+	if err != nil {
+		http.Error(w, "Failed to get IP geolocation", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]any{
+		"request_id": reqID,
+		"client_ip":  ip,
+		"ip_info":    ipInfo,
+	})
+
 }
