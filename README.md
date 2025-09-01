@@ -1,4 +1,4 @@
-# test-go — Learning Go by Building Small Projects
+# Hello-World-Go — Learning Go by Building Small Projects
 
 This repo contains small, focused Go projects to learn the language, web frameworks, DB access, concurrency, and calling external APIs.
 
