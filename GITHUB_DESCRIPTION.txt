@@ -1,0 +1,1 @@
+Learning Go through practical examples: REST APIs (Gin, Chi), PostgreSQL integration, weather APIs, concurrency patterns, and module management. Educational repository with hands-on Go development scenarios.
