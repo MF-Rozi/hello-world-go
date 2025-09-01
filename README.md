@@ -112,5 +112,3 @@ This repo contains small, focused Go projects to learn the language, web framewo
 - Web-Service-Chi uses PostgreSQL placeholders ($1, $2, …). MySQL-style (?) won’t work there.
 - With proxies/tunnels (e.g., ngrok), client IP is taken from X-Forwarded-For/X-Real-IP (RealIP middleware).
 - Prefer sqlc + pgx for type-safe, fast DB access; keep schema/queries in versioned files.
-
-Happy
