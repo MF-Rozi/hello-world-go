@@ -1,4 +1,4 @@
 Test-Connect-DBMS/main/.env
 Web-Service-Gin/.env
 Web-Service-Chi/.env
-Next-js-backend/configs/.env
+Next-js-backend/internal/config/.env
