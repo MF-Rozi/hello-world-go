@@ -10,6 +10,8 @@ This repo contains small, focused Go projects to learn the language, web framewo
   - REST API using Chi + PostgreSQL. Uses sqlc for type-safe queries and pgx (stdlib) driver. Schema and queries are versioned.
 - Weather-Api
   - HTTP API that detects client IP (handles proxies) and returns current weather from Open‑Meteo, mapping WMO codes to human-friendly descriptions (embedded JSON).
+- Next-js-backend
+  - HTTP API using Chi that detects client IP and returns geolocation data from ipinfo.io. Features IP detection with proxy support and JSON responses.
 - Test-Connect-DBMS
   - Minimal examples for connecting to a database with environment variables.
 - Go-Routine
@@ -69,7 +71,20 @@ This repo contains small, focused Go projects to learn the language, web framewo
 - Data:
   - Embedded code map: Weather-Api/models/weather_codes.json
 
-### 4) Test-Connect-DBMS
+### 4) Next-js-backend
+
+- Purpose: HTTP API that returns IP geolocation data using ipinfo.io service.
+- Copy env:
+  - cp Next-js-backend/internal/config/.env-example Next-js-backend/internal/config/.env
+  - Edit database credentials if needed
+- Run:
+  - cd Next-js-backend
+  - go run cmd/main.go
+- Endpoints:
+  - GET / → Welcome message
+  - GET /ip → { message, ip, location { ip, country_code, country_name, region_code, region_name, city, zipcode, latitude, longitude, time_zone } }
+
+### 5) Test-Connect-DBMS
 
 - Copy env:
   - cp Test-Connect-DBMS/main/.env-example Test-Connect-DBMS/main/.env
@@ -78,7 +93,7 @@ This repo contains small, focused Go projects to learn the language, web framewo
   - cd Test-Connect-DBMS/main
   - go run main.go
 
-### 5) Go-Routine (Concurrency demos)
+### 6) Go-Routine (Concurrency demos)
 
 - Run:
   - cd Go-Routine
@@ -86,7 +101,7 @@ This repo contains small, focused Go projects to learn the language, web framewo
 - Try different levels of parallelism:
   - Edit runtime.GOMAXPROCS(n) and observe scheduling/prints.
 
-### 6) Make a Module (Modules, packages, tests)
+### 7) Make a Module (Modules, packages, tests)
 
 - greetings package:
   - cd "Make a Module/greetings"
