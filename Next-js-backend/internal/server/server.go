@@ -40,6 +40,42 @@ func clientIP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get geolocation", http.StatusInternalServerError)
 		return
 	}
+
+	// If connecting locally/private and no location from ipinfo, set default coords
+	if func(ip string) bool {
+		p := net.ParseIP(ip)
+		if p == nil {
+			return false
+		}
+		if p.IsLoopback() {
+			return true
+		}
+		if v4 := p.To4(); v4 != nil {
+			if v4[0] == 10 {
+				return true
+			}
+			if v4[0] == 172 && v4[1] >= 16 && v4[1] <= 31 {
+				return true
+			}
+			if v4[0] == 192 && v4[1] == 168 {
+				return true
+			}
+		}
+		return false
+	}(ip) {
+		// Only override if upstream service returned no coordinates
+		if location.Latitude == 0 && location.Longitude == 0 {
+			location.City = "Localhost/Pekanbaru"
+			location.Region = "Local"
+			location.Country = "Local"
+			location.Latitude = 0.5167
+			location.Longitude = 101.4417
+			location.Timezone = "Asia/Jakarta"
+			location.Postal = "00000"
+			location.Org = "Local Dev"
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
 		"message":  "success",
